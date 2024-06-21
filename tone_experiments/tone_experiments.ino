@@ -1,84 +1,94 @@
 #include <Arduino.h>
 
-int delayTime = 100;
-int noteDuration = 350;
-int buzzTime = 100;
-int previous = 1;
-int seventhStep = 9;
-int halfStep = 31;
-int wholeStep = 62;
+uint8_t delayTime = 100;
+uint8_t noteDuration = 77;
+uint8_t buzzTime = 100;
+uint8_t previous = 1;
+uint8_t seventhStep = 9;
+uint8_t halfStep = 31;
+uint8_t wholeStep = 62;
 bool stepUp = true;
 
-int buzzButton = 4;
-int buzzer = 11;
+uint8_t buzzButton = 4;
+uint8_t buzzer = 11;
 
 void buzzUp (
-  int (*incrementFunc) (int note, int incrementAmount, int initialNote),
-  int incrementAmount, int initialNote, int finalNote) {
+  int (*changeFunc) (int note, uint8_t changeAmount, int initialNote),
+  uint8_t changeAmount, int initialNote, int finalNote) {
   int note = initialNote;
   while (note < finalNote) {
     tone(buzzer, note, noteDuration * 0.9);
     delay(noteDuration);
     noTone(buzzer);
-    note = incrementFunc(note, incrementAmount, initialNote);
-    Serial.print("note: ");
-    Serial.println(note);
+    note += changeFunc(note, changeAmount, initialNote);
   }
 }
 
-int halfStepUp (int note, int incrementAmount, int initialNote) {
-  return note + halfStep;
+void buzzDown (
+  int (*changeFunc) (int note, uint8_t changeAmount, int initialNote),
+  uint8_t changeAmount, int initialNote, int finalNote) {
+  int note = initialNote;
+  while (note > finalNote) {
+    tone(buzzer, note, noteDuration * 0.9);
+    delay(noteDuration);
+    noTone(buzzer);
+    note -= changeFunc(note, changeAmount, initialNote);
+  }
 }
 
-int wholeStepUp (int note, int incrementAmount, int initialNote) {
-  return note + wholeStep;
+int halfStepUp (int note, uint8_t changeAmount, int initialNote) {
+  return halfStep;
 }
 
-int upWholeDownHalf (int note, int incrementAmount, int initialNote) {
+int wholeStepUp (int note, uint8_t changeAmount, int initialNote) {
+  return wholeStep;
+}
+
+int upWholeDownHalf (int note, uint8_t changeAmount, int initialNote) {
   if (stepUp) {
     stepUp = false;
-    return note + wholeStep * 3;
+    return wholeStep * 3;
   }
   stepUp = true;
-  return note - halfStep * 3;
+  return halfStep * 3;
 }
 
 // fibonacci series
-int buzzonacci (int note, int incrementAmount, int initialNote) {
+int buzzonacci (int note, uint8_t changeAmount, int initialNote) {
   int current;
   if (note == initialNote) {
     previous = 1;
     current = 1;
   } else {
-    current = (note - initialNote) / incrementAmount;
+    current = abs((note - initialNote) / changeAmount);
   }
   previous += current;
-  return note + (previous * incrementAmount);
+  return previous * changeAmount;
 }
 
 // catalan numbers series
-int buzzalan (int note, int incrementAmount, int initialNote) {
+int buzzalan (int note, uint8_t changeAmount, int initialNote) {
   if (note == initialNote) {
     previous = 1;
   }
   previous += (previous + 2) / 2;
-  return note + (previous * incrementAmount);
+  return previous * changeAmount;
 }
 
-int squareBuzz (int note, int incrementAmount, int initialNote) {
+int squareBuzz (int note, uint8_t changeAmount, int initialNote) {
   if (note == initialNote) {
     previous = 1;
   }
   previous += (previous * (previous * previous + 1)) / 2;
-  return note + (previous * incrementAmount);
+  return previous * changeAmount;
 }
 
-int triangleBuzz (int note, int incrementAmount, int initialNote) {
+int triangleBuzz (int note, uint8_t changeAmount, int initialNote) {
   if (note == initialNote) {
     previous = 1;
   }
   previous += (previous * (previous + 1)) / 2;
-  return note + (previous * incrementAmount);
+  return previous * changeAmount;
 }
 
 void setup () {
@@ -92,11 +102,21 @@ void loop () {
   byte buzzButtonState = digitalRead(buzzButton);
   if (!buzzButtonState) {
     Serial.println("buzz buzz");
-    for (int i = 0; i < 3; i++) {
-      buzzUp(buzzonacci, seventhStep, 523, 3515);
-      buzzUp(buzzonacci, seventhStep, 1015, 4515);
-      buzzUp(buzzonacci, seventhStep, 1523, 5515);
-      delay(delayTime * 3);
+    int start = 223;
+    int end = 762;
+    uint8_t sequence[11] = { 1, 2, 3, 5, 8, 13, 8, 5, 3, 2, 1 };
+    uint8_t sequenceLength = sizeof(sequence) / sizeof(sequence[0]);
+    for (uint8_t i = 0; i < sequenceLength; i++) {
+      int pitchChange = halfStep * sequence[i];
+      if (pitchChange % 2) {
+        start += pitchChange;
+        end += pitchChange;
+        buzzDown(buzzonacci, seventhStep, end, start);
+      } else {
+        start -= pitchChange;
+        end -= pitchChange;
+        buzzUp(buzzalan, seventhStep, start, end);
+      }
     }
   }
 
