@@ -1,8 +1,7 @@
 #include <Arduino.h>
 
 uint8_t delayTime = 100;
-uint8_t noteDuration = 77;
-uint8_t buzzTime = 100;
+uint16_t noteDuration = 1444;
 uint8_t previous = 1;
 uint8_t seventhStep = 9;
 uint8_t halfStep = 31;
@@ -126,6 +125,22 @@ void ascendingTrill () {
   }
 }
 
+void ascendingBeeps () {
+  uint16_t note = 223;
+  uint8_t prev = 1;
+  uint8_t curr = 1;
+  while (curr <= 21) {
+    uint16_t pitchChange = halfStep * curr;
+    note += pitchChange;
+    tone(buzzer, note, noteDuration * 0.9);
+    delay(noteDuration);
+    noTone(buzzer);
+    delay(delayTime);
+    prev = curr;
+    curr += prev;
+  }
+}
+
 void setup () {
   Serial.begin(9600);
 
@@ -136,7 +151,7 @@ void setup () {
 void loop () {
   byte buzzButtonState = digitalRead(buzzButton);
   if (!buzzButtonState) {
-    ascendingTrill();
+    ascendingBeeps();
   }
 
   delay(delayTime);
